@@ -77,3 +77,11 @@ func (c Client) NewLatestPayload(since time.Time) Payload {
     Since: int64(since.Unix()),
   }
 }
+
+func (c Client) NewAfterPayload(since time.Time, count int, offset int) Payload {
+  payload := c.NewUnreadCompletePayload(count, offset)
+  payload.State = "all"
+  payload.Sort = "oldest"
+  payload.Since = int64(since.Unix())
+  return payload
+}

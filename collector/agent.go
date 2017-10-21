@@ -5,7 +5,6 @@ import (
   "fmt"
   "time"
   "log"
-  "skyitachi/pocket_fulltext_search/util"
 )
 
 type Agent struct {
@@ -25,14 +24,23 @@ func (agent *Agent) Start() {
     case <- agent.Done:
       fmt.Println("agent done")
     case <- time.After(agent.Interval):
+      ret, err := agent.pocketClient.GetLatestList(time.Now())
+      if err != nil {
+        log.Println("pull data from pocket failed, ", err)
+      }
+      log.Println("starting index data to es")
+      agent.es.IndexList(ret)
+      log.Printf("index data to es successfully with %d items\n", len(ret))
       // start pull pocket
     }
   }
 }
 
 func (agent *Agent) Sync() {
-  fetched := false
-  since := time.Now()
+  offset, err := agent.pocketClient.ReadOffset()
+  if err != nil {
+    offset = 0
+  }
   for {
     select {
     case <-agent.Exit:
@@ -40,43 +48,25 @@ func (agent *Agent) Sync() {
     case <- agent.Done:
       fmt.Println("agent done")
     case <- time.After(agent.SyncInterval):
+      // use offset get all list
+      since := time.Unix(0, 0)
       var ret []pocket.CompleteItem
       var err error
-      if fetched {
-        ret, err = agent.pocketClient.GetListAfter(10,0, since)
+      for {
+        ret, err = agent.pocketClient.GetListAfter(10, offset, since)
         if err != nil {
           log.Println("sync data with error: ", err)
-          goto currentLoopEnd
+          continue
         } else if len(ret) == 0 {
           log.Println("no data to sync")
-          goto currentLoopEnd
+          agent.pocketClient.WriteOffset(offset)
+          break
         }
         agent.es.IndexList(ret)
         fmt.Println("sync and store data successfully")
-      } else {
-        ret, err = agent.pocketClient.GetAllList(1, 0)
-        if err != nil || len(ret) == 0 {
-          log.Println("no data to sync")
-          goto currentLoopEnd
-        }
-        agent.es.IndexList(ret)
-        fmt.Println("sync and store data successfully")
-        fetched = true
+        offset += len(ret)
       }
-      if len(ret) == 0 {
-        goto currentLoopEnd
-      }
-      parsed, err := util.Str2Time(ret[len(ret) - 1].Create)
-      if err != nil {
-        fmt.Println("parsed date error, ", err.Error())
-        log.Println(ret[len(ret) - 1])
-        log.Println("sync data with unexpect timestamp: ", ret[len(ret) - 1].Create)
-        goto currentLoopEnd
-      }
-      fmt.Println("parased date is ", parsed)
-      since = parsed
     }
-    currentLoopEnd:
   }
 }
 

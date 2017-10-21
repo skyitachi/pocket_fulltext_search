@@ -1,5 +1,10 @@
 package pocket
 
+import (
+  "time"
+  "skyitachi/pocket_fulltext_search/util"
+)
+
 type TagItem struct {
   ItemId string `json:"item_id"`
   TagName string `json:"tag"`
@@ -53,3 +58,15 @@ func GetTagList(tagMap map[string]TagItem) []string {
   return tags
 }
 
+func GetNewestTime(list []CompleteItem) (time.Time, error){
+  ans := ""
+  for _, v := range list {
+    if v.Create > ans {
+      ans = v.Create
+    }
+    if v.Update > ans {
+      ans = v.Update
+    }
+  }
+  return util.Str2Time(ans)
+}

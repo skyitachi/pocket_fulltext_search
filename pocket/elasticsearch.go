@@ -170,6 +170,7 @@ func (es *ElasticSearch) SearchByTitle(title string) {
   PrettyPrintSearchResult(searchRet)
 }
 
+// exact term match
 func (es *ElasticSearch) Search(text string) {
   bQuery := elastic.NewBoolQuery()
   mTagQuery := elastic.NewMatchQuery("tags", text).Boost(TagPriority)
@@ -186,6 +187,23 @@ func (es *ElasticSearch) Search(text string) {
   PrettyPrintSearchResult(searchRet)
 }
 
+// wildcard match
+func (es *ElasticSearch) SearchFull(text string) {
+  wildStr := util.BuildWildCardString(text)
+  bQuery := elastic.NewBoolQuery()
+  mTagWQuery := elastic.NewWildcardQuery("tags", wildStr).Boost(TagPriority)
+  bQuery = bQuery.Should(mTagWQuery)
+  mTitleWQuery := elastic.NewWildcardQuery("title", wildStr).Boost(TitlePriority)
+  bQuery = bQuery.Should(mTitleWQuery)
+  mExcerptMQuery := elastic.NewWildcardQuery("excerpt", wildStr).Boost(ExcerptPriority)
+  bQuery = bQuery.Should(mExcerptMQuery)
+  searchRet, err :=
+    es.client.Search().Index(IndexName).Type(TypeName).Query(bQuery).Do(context.Background())
+  if err != nil {
+    log.Println("search by full text error: ", err)
+  }
+  PrettyPrintSearchResult(searchRet)
+}
 
 func PrettyPrintSearchResult(ret *elastic.SearchResult) {
   fmt.Printf("match %d items\n", ret.Hits.TotalHits)

@@ -13,3 +13,6 @@ func Str2Time(str string) (time.Time, error) {
   return time.Unix(ret, 0), nil
 }
 
+func BuildWildCardString(input string) string {
+  return "*" + input + "*"
+}

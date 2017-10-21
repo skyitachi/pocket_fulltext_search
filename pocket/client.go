@@ -30,8 +30,9 @@ type Client struct {
   init bool
 }
 
-type config struct {
+type Config struct {
   AccessToken string `json:"access_token"`
+  UpdatedOffset int `json:"offset,omitempty"'`
 }
 
 type accessTokenPayLoad struct {
@@ -55,44 +56,66 @@ func checkError(err error) {
   }
 }
 
-func (c Client) storeAccessToken(accessToken string) {
+func (c Client) ReadConfig() (Config, error) {
+  usr, err := user.Current()
+  checkError(err)
+  configPath := path.Join(usr.HomeDir, POCKETRC)
+  file, err := os.OpenFile(configPath, os.O_RDWR | os.O_CREATE, 0744)
+  defer file.Close()
+  rl := bufio.NewReader(file)
+  configBytes, err := ioutil.ReadAll(rl)
+  if err != nil {
+    return Config{}, err
+  }
+  usrConfig := &Config{}
+  err = json.Unmarshal(configBytes, usrConfig)
+  if err != nil {
+    return Config{}, err
+  }
+  return *usrConfig, nil
+}
+
+func (c Client) WriteConfig(conf Config) {
   usr, err := user.Current()
   checkError(err)
   configPath := path.Join(usr.HomeDir, POCKETRC)
   file, err := os.OpenFile(configPath, os.O_RDWR | os.O_CREATE, 0744)
   defer file.Close()
   checkError(err)
-  userConfig := config{
-    AccessToken: accessToken,
-  }
-  configBytes, err := json.Marshal(userConfig)
+  configBytes, err := json.Marshal(conf)
   checkError(err)
   file.Write(configBytes)
-  fmt.Printf("access_token get successfully\n")
+  fmt.Printf("write config successfully\n")
+}
+
+func (c Client) storeAccessToken(accessToken string) {
+  conf, err := c.ReadConfig()
+  checkError(err)
+  conf.AccessToken = accessToken
+  c.WriteConfig(conf)
 }
 
 func (c Client) readAccessToken() (string, error) {
-  usr, err := user.Current()
+  conf, err := c.ReadConfig()
   if err != nil {
     return "", err
   }
-  configPath := path.Join(usr.HomeDir, POCKETRC)
-  file, err := os.OpenFile(configPath, os.O_RDONLY, 0744)
+  return conf.AccessToken, nil
+}
+
+func (c Client) WriteOffset(offset int) {
+  conf, err := c.ReadConfig()
+  checkError(err)
+  conf.UpdatedOffset = offset
+  c.WriteConfig(conf)
+}
+
+func (c Client) ReadOffset() (int, error) {
+  conf, err := c.ReadConfig()
   if err != nil {
-    return "", err
+    return -1, err
   }
-  defer file.Close()
-  rl := bufio.NewReader(file)
-  configBytes, err := ioutil.ReadAll(rl)
-  if err != nil {
-    return "", err
-  }
-  usrConfig := &config{}
-  err = json.Unmarshal(configBytes, usrConfig)
-  if err != nil {
-    return "", err
-  }
-  return usrConfig.AccessToken, nil
+  return conf.UpdatedOffset, nil
 }
 
 func (c Client) getAccessToken(payLoad accessTokenPayLoad) {
@@ -220,10 +243,7 @@ func (c *Client) GetLatestList(since time.Time) ([]CompleteItem, error) {
 }
 
 func (c *Client) GetListAfter(count int, offset int, after time.Time) ([]CompleteItem, error) {
-  payload := c.NewLatestPayload(after)
-  payload.Count = count
-  payload.Offset = offset
-  payload.Sort = "oldest"
+  payload := c.NewAfterPayload(after, count, offset)
   return c.fetchCompleteJSON(payload)
 }
 
@@ -232,7 +252,7 @@ func (c *Client) Init() {
   if err == nil && len(accessToken) > 0 {
     c.init = true
     c.accessToken = accessToken
-    log.Println("read accesstoken from config successfully")
+    log.Println("read accesstoken from Config successfully")
     return
   } else {
     log.Fatal(err.Error())
