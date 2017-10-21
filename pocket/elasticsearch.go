@@ -5,6 +5,9 @@ import (
   "log"
   "context"
   "errors"
+  "skyitachi/pocket_fulltext_search/util"
+  "strings"
+  "fmt"
 )
 
 const IndexName = "pocket"
@@ -15,6 +18,12 @@ type ElasticItem struct {
   Title string `json:"title"`
   Excerpt string `json:"excerpt"`
   Tags []string `json:"tags,omitempty"`
+  Create int64 `json:"created,omitempty"`
+  Update int64 `json:"updated,omitempty"`
+  Url string `json:"source,omitempty"`
+  Author string `json:"author,omitempty"`
+  Favourite bool `json:"favourite"`
+  TagStr string `json:"tag_str,omitempty"`
 }
 
 type ElasticSearch struct {
@@ -62,7 +71,7 @@ func (es *ElasticSearch) Init() {
 					"type":"keyword"
 				},
         "title": {
-          "type":"keyword"
+          "type":"text"
         },
 				"excerpt":{
 					"type":"text",
@@ -70,8 +79,19 @@ func (es *ElasticSearch) Init() {
 					"fielddata": true
 				},
 				"tags":{
-					"type":"keyword"
-				}
+					"type":"text"
+				},
+        "tag_str": {
+          "type": "text"
+        }
+        "created": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+        },
+        "updated": {
+          "type": "date",
+          "format": "yyyy-MM-dd HH:mm:ss||yyyy-MM-dd||epoch_millis"
+        }
 			}
 		}
 	}
@@ -86,29 +106,83 @@ func (es *ElasticSearch) Init() {
   }
 }
 
-func (es *ElasticSearch) Index(rawItem CompleteItem) (*elastic.IndexResponse, error) {
-  esItem := ElasticItem{
-    Id: rawItem.ResolvedId,
-    Title: rawItem.Title,
-    Excerpt: rawItem.Excerpt,
-    Tags: GetTagList(rawItem.Tags),
+func (es *ElasticSearch) RemoveIndex() {
+  ret, err := es.client.DeleteIndex(IndexName).Do(context.Background())
+  checkError(err)
+  if !ret.Acknowledged {
+    checkError(errors.New("delete elastic search index failed"))
+  }
+}
+
+func (es *ElasticSearch) Index(item CompleteItem) (*elastic.IndexResponse, error) {
+  esItem, err := transform(item)
+  if err != nil {
+    return nil, err
+  }
+  // check if exists
+  mQuery := elastic.NewMatchQuery("id", esItem.Id)
+  searchRet, err := es.client.Search().Index(IndexName).Type(TypeName).Query(mQuery).Size(1).Do(context.Background())
+  if err != nil {
+    log.Println(err)
+  } else if searchRet.Hits.TotalHits > 0 {
+    return nil, errors.New("item :" + esItem.Id + " exists")
   }
   return es.client.Index().Index(IndexName).Type(TypeName).BodyJson(esItem).Do(context.Background())
 }
 
 func (es *ElasticSearch) IndexList(itemList []CompleteItem) error {
   for _, item := range itemList {
-    esItem := ElasticItem{
-      Id: item.ResolvedId,
-      Title: item.Title,
-      Excerpt: item.Excerpt,
-      Tags: GetTagList(item.Tags),
-    }
-    _, err := es.client.Index().Index(IndexName).Type(TypeName).BodyJson(esItem).Do(context.Background())
+    _, err := es.Index(item)
     if err != nil {
-      return err
+      log.Println(err)
+      continue
     }
   }
   return nil
 }
 
+func (es *ElasticSearch) SearchByTags(tags []string) {
+  bQuery := elastic.NewBoolQuery()
+  for _, tag := range tags {
+    mQuery := elastic.NewMatchQuery("tags", tag)
+    bQuery = bQuery.Must(mQuery)
+  }
+  searchRet, err := es.client.Search().Index(IndexName).Type(TypeName).Query(bQuery).Do(context.Background())
+  if err != nil {
+    log.Println("search by tags error: ", err)
+    return
+  }
+  fmt.Printf("match %d items\n", searchRet.Hits.TotalHits)
+}
+
+func transform(item CompleteItem) (ElasticItem, error) {
+  if item.ResolvedId == "" {
+    return ElasticItem{}, errors.New("resolved_id is empty")
+  }
+  cTime, err := util.Str2Time(item.Create)
+  if err != nil {
+    return ElasticItem{}, err
+  }
+  uTime, err := util.Str2Time(item.Update)
+  if err != nil {
+    return ElasticItem{}, err
+  }
+  favourite := false
+  if item.Favorite == "1" {
+    favourite = true
+  }
+  tagsList := GetTagList(item.Tags)
+  tagStr := strings.Join(tagsList, ",")
+  esItem := ElasticItem {
+    Id: item.ResolvedId,
+    Title: item.Title,
+    Excerpt: item.Excerpt,
+    Tags: tagsList,
+    TagStr: tagStr,
+    Create: cTime.Unix() * 1000,
+    Update: uTime.Unix() * 1000,
+    Url: item.Url,
+    Favourite: favourite,
+  }
+  return esItem, nil
+}

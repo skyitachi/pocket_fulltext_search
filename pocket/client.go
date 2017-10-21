@@ -189,6 +189,10 @@ func (c *Client) fetchCompleteJSON(payLoad interface{}) ([]CompleteItem, error){
   }
   ret := []CompleteItem{}
   for _, v := range res.ItemMap {
+    // status: 2 - deleted
+    if v.Status == "2" {
+      continue
+    }
     ret = append(ret, v)
   }
   return ret, nil

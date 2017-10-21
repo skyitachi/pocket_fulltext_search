@@ -17,6 +17,7 @@ type SimpleItem struct {
 
 type CompleteItem struct {
   Id string `json:"item_id"`
+  Status string `json:"status"`
   ResolvedId string `json:"resolved_id"`
   Favorite string `json:"favorite,omitempty"`
   Title string `json:"resolved_title"`

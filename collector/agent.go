@@ -68,7 +68,8 @@ func (agent *Agent) Sync() {
       }
       parsed, err := util.Str2Time(ret[len(ret) - 1].Create)
       if err != nil {
-        fmt.Println("parsed date error, ", err)
+        fmt.Println("parsed date error, ", err.Error())
+        log.Println(ret[len(ret) - 1])
         log.Println("sync data with unexpect timestamp: ", ret[len(ret) - 1].Create)
         goto currentLoopEnd
       }

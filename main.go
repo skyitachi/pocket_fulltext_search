@@ -16,6 +16,16 @@ func check(err error) {
         log.Fatal(err)
     }
 }
+type tagFlags []string
+
+func (i *tagFlags) String() string {
+  return "tagFlag"
+}
+func (i *tagFlags) Set(value string) error {
+  *i = append(*i, value)
+  return nil
+}
+
 type AccessTokenPayLoad struct {
     ConsumerKey string `json:"consumer_key"`
     Code string `json:"code"`
@@ -24,6 +34,14 @@ type AccessTokenPayLoad struct {
 var consumer_key = "40534-becce4b35a568bb14eed0fe7"
 
 func main() {
+  // parse command line
+  var tags tagFlags
+  syncPtr := flag.Bool("sync", false, "同步数据")
+  rmIndex := flag.Bool("rmIndex", false, "删除现有index")
+  searchPtr := flag.Bool("search", false, "搜索文档")
+  flag.Var(&tags, "tag", "pocket item tag")
+  flag.Parse()
+
   // Init Pocket Client
   client := pocket.NewClient(consumer_key)
   client.Init()
@@ -34,16 +52,20 @@ func main() {
   es.Init()
   log.Println("elasticsearch client init successfully")
 
-  // parse command line
-  syncPtr := flag.Bool("sync", false, "同步数据")
-  flag.Parse()
-
-  if *syncPtr {
+  if *searchPtr {
+    if len(tags) > 0 {
+      es.SearchByTags(tags)
+    }
+  } else if *syncPtr {
     fmt.Println("start sync data")
     collector := collector.NewCollector(client, es, time.Second * 10, time.Second * 5)
     go collector.Sync()
     time.Sleep(20 * time.Second)
     collector.Exit <- 1
+  } else if *rmIndex {
+    fmt.Println("deleting elastic search index")
+    es.RemoveIndex()
+    fmt.Println("delete elastic search index successfully")
   } else {
     cList, err := client.GetAllList(1, 1)
     check(err)
