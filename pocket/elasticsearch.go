@@ -8,10 +8,16 @@ import (
   "skyitachi/pocket_fulltext_search/util"
   "strings"
   "fmt"
+  "encoding/json"
 )
 
 const IndexName = "pocket"
 const TypeName = "item"
+const (
+  ExcerptPriority = 1
+  TitlePriority = 2
+  TagPriority = 3
+)
 
 type ElasticItem struct {
   Id string `json:"id"`
@@ -152,7 +158,46 @@ func (es *ElasticSearch) SearchByTags(tags []string) {
     log.Println("search by tags error: ", err)
     return
   }
-  fmt.Printf("match %d items\n", searchRet.Hits.TotalHits)
+  PrettyPrintSearchResult(searchRet)
+}
+
+func (es *ElasticSearch) SearchByTitle(title string) {
+  mQuery := elastic.NewMatchQuery("title", title)
+  searchRet, err := es.client.Search().Index(IndexName).Type(TypeName).Query(mQuery).Do(context.Background())
+  if err != nil {
+    log.Println("search by title error: ", err)
+  }
+  PrettyPrintSearchResult(searchRet)
+}
+
+func (es *ElasticSearch) Search(text string) {
+  bQuery := elastic.NewBoolQuery()
+  mTagQuery := elastic.NewMatchQuery("tags", text).Boost(TagPriority)
+  bQuery = bQuery.Should(mTagQuery)
+  mTitleQuery := elastic.NewMatchQuery("title", text).Boost(TitlePriority)
+  bQuery = bQuery.Should(mTitleQuery)
+  mExcerptQuery := elastic.NewMatchQuery("excerpt", text).Boost(ExcerptPriority)
+  bQuery = bQuery.Should(mExcerptQuery)
+  searchRet, err :=
+    es.client.Search().Index(IndexName).Type(TypeName).Query(bQuery).Do(context.Background())
+  if err != nil {
+    log.Println("search by text error: ", err)
+  }
+  PrettyPrintSearchResult(searchRet)
+}
+
+
+func PrettyPrintSearchResult(ret *elastic.SearchResult) {
+  fmt.Printf("match %d items\n", ret.Hits.TotalHits)
+  for _, hit := range ret.Hits.Hits {
+    var esItem ElasticItem
+    err := json.Unmarshal(*hit.Source, &esItem)
+    if err != nil {
+      log.Println(err)
+    } else {
+      fmt.Printf("{\n  title: \"%s\", \n  source: \"%s\"\n}\n", esItem.Title, esItem.Url)
+    }
+  }
 }
 
 func transform(item CompleteItem) (ElasticItem, error) {

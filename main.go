@@ -39,6 +39,7 @@ func main() {
   syncPtr := flag.Bool("sync", false, "同步数据")
   rmIndex := flag.Bool("rmIndex", false, "删除现有index")
   searchPtr := flag.Bool("search", false, "搜索文档")
+  txtPtr := flag.String("text", "", "搜索文本")
   flag.Var(&tags, "tag", "pocket item tag")
   flag.Parse()
 
@@ -55,6 +56,9 @@ func main() {
   if *searchPtr {
     if len(tags) > 0 {
       es.SearchByTags(tags)
+    } else if len(*txtPtr) > 0 {
+      fmt.Printf("search string is %s\n", *txtPtr)
+      es.Search(*txtPtr)
     }
   } else if *syncPtr {
     fmt.Println("start sync data")
@@ -78,7 +82,5 @@ func main() {
       }
       fmt.Println(time.Unix(ret, 0))
     }
-
   }
-
 }
