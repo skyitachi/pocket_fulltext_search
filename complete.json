@@ -1,0 +1,81 @@
+{
+  "status": 1,
+  "complete": 1,
+  "list": {
+    "1913849444": {
+      "item_id": "1913849444",
+      "resolved_id": "1913849444",
+      "given_url": "https://syslog.ravelin.com/golangpoolparty-950723a042be",
+      "given_title": "",
+      "favorite": "0",
+      "status": "0",
+      "time_added": "1508548766",
+      "time_updated": "1508563025",
+      "time_read": "0",
+      "time_favorited": "0",
+      "sort_id": 0,
+      "resolved_title": "#GolangPoolParty!",
+      "resolved_url": "https://syslog.ravelin.com/golangpoolparty-950723a042be",
+      "excerpt":
+        "In a previous post I investigated how long it takes to start a goroutine to do some work and get a result back from it. To set a baseline I compared this to doing the same thing in C with pthreads.",
+      "is_article": "1",
+      "is_index": "0",
+      "has_video": "1",
+      "has_image": "1",
+      "word_count": "659",
+      "tags": { "golang": { "item_id": "1913849444", "tag": "golang" } },
+      "authors": {
+        "59065261": {
+          "item_id": "1913849444",
+          "author_id": "59065261",
+          "name": "Phil Pearl",
+          "url": "https://syslog.ravelin.com/@philpearl"
+        }
+      },
+      "image": {
+        "item_id": "1913849444",
+        "src":
+          "https://cdn-images-1.medium.com/max/1600/1*6ECyRQoNFB2s48h8o8LAcg.jpeg",
+        "width": "0",
+        "height": "0"
+      },
+      "images": {
+        "1": {
+          "item_id": "1913849444",
+          "image_id": "1",
+          "src":
+            "https://cdn-images-1.medium.com/max/1600/1*6ECyRQoNFB2s48h8o8LAcg.jpeg",
+          "width": "0",
+          "height": "0",
+          "credit": "",
+          "caption": "I\u2019m not trying to burst your\u00a0balloon"
+        }
+      },
+      "videos": {
+        "1": {
+          "item_id": "1913849444",
+          "video_id": "1",
+          "src":
+            "https://syslog.ravelin.com/media/9ce7fbfbd219546b4fc8debe337ca398?postId=950723a042be",
+          "width": "700",
+          "height": "250",
+          "type": "7",
+          "vid": ""
+        },
+        "2": {
+          "item_id": "1913849444",
+          "video_id": "2",
+          "src":
+            "https://syslog.ravelin.com/media/1c52c38465500d93ab36b4023fa7c003?postId=950723a042be",
+          "width": "700",
+          "height": "250",
+          "type": "7",
+          "vid": ""
+        }
+      }
+    }
+  },
+  "error": null,
+  "search_meta": { "search_type": "normal" },
+  "since": 1508563181
+}
