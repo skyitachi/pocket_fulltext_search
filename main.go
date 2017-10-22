@@ -32,6 +32,7 @@ var consumer_key = "40534-becce4b35a568bb14eed0fe7"
 func main() {
   // parse command line
   var tags tagFlags
+  initPtr := flag.Bool("init", false, "pocket账户授权")
   pullPtr := flag.Bool("pull", false, "拉取最新数据")
   syncPtr := flag.Bool("sync", false, "同步数据")
   rmIndex := flag.Bool("rmIndex", false, "删除现有index")
@@ -41,6 +42,13 @@ func main() {
   flag.Var(&tags, "tag", "pocket item tag")
   flag.Parse()
 
+  if *initPtr {
+    // Init Pocket Client
+    client := pocket.NewClient(consumer_key)
+    client.Init()
+    log.Println("pocket client init successfully")
+    return
+  }
   // Init Pocket Client
   client := pocket.NewClient(consumer_key)
   client.Init()
@@ -49,8 +57,8 @@ func main() {
   es, err := pocket.NewElasticClient()
   check(err)
   es.Init()
-  log.Println("elasticsearch client init successfully")
 
+  log.Println("elasticsearch client init successfully")
   if *fzSearchPtr {
     if len(*txtPtr) > 0 {
       fmt.Printf("search string is %s\n", *txtPtr)

@@ -255,7 +255,7 @@ func (c *Client) Init() {
     log.Println("read accesstoken from Config successfully")
     return
   } else {
-    log.Fatal(err.Error())
+    fmt.Println("start authorize pocket")
   }
   body := url.Values{}
   body.Set("consumer_key", c.ConsumerKey)
