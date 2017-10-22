@@ -74,6 +74,8 @@ func (c Client) NewLatestPayload(since time.Time) Payload {
     AccessToken: c.accessToken,
     DetailType: "complete",
     ContentType: "article",
+    Sort: "newest",
+    State: "all",
     Since: int64(since.Unix()),
   }
 }

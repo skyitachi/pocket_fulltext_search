@@ -147,6 +147,27 @@ func (es *ElasticSearch) IndexList(itemList []CompleteItem) error {
   return nil
 }
 
+func (es *ElasticSearch) ItemExists(item CompleteItem) bool {
+  mQuery := elastic.NewMatchQuery("id", item.Id)
+  searchRet, err := es.client.Search().Index(IndexName).Type(TypeName).Query(mQuery).Size(1).Do(context.Background())
+  if err != nil {
+    return true
+  } else if searchRet.Hits.TotalHits > 0 {
+    return true
+  }
+  return false
+}
+
+func (es *ElasticSearch) ItemListNotExists(itemList []CompleteItem) []CompleteItem {
+  ret := []CompleteItem{}
+  for _, item := range itemList {
+    if !es.ItemExists(item) {
+      ret = append(ret, item)
+    }
+  }
+  return ret
+}
+
 func (es *ElasticSearch) SearchByTags(tags []string) {
   bQuery := elastic.NewBoolQuery()
   for _, tag := range tags {

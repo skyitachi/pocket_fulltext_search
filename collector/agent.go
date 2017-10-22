@@ -16,7 +16,10 @@ type Agent struct {
   SyncInterval time.Duration
 }
 
-func (agent *Agent) Start() {
+func (agent *Agent) StartPull() {
+  since := time.Now()
+  var ret []pocket.CompleteItem
+  var err error
   for {
     select {
     case <- agent.Exit:
@@ -24,14 +27,28 @@ func (agent *Agent) Start() {
     case <- agent.Done:
       fmt.Println("agent done")
     case <- time.After(agent.Interval):
-      ret, err := agent.pocketClient.GetLatestList(time.Now())
+      ret, err = agent.pocketClient.GetLatestList(since)
       if err != nil {
         log.Println("pull data from pocket failed, ", err)
       }
-      log.Println("starting index data to es")
-      agent.es.IndexList(ret)
-      log.Printf("index data to es successfully with %d items\n", len(ret))
-      // start pull pocket
+      // 过滤那些已经存在的item
+      filtered := agent.es.ItemListNotExists(ret)
+      if len(filtered) > 0 {
+        since, err = pocket.GetNewestTime(filtered)
+        if err != nil {
+          since = time.Now()
+          log.Println("update pull time error ", err)
+        }
+        log.Println("starting index data to es")
+        err = agent.es.IndexList(filtered)
+        log.Printf("index data to es successfully with %d items\n", len(filtered))
+      } else {
+        if len(ret) > 0 {
+          // 避免无效请求
+          since = time.Now()
+        }
+        fmt.Println("no data to pull")
+      }
     }
   }
 }

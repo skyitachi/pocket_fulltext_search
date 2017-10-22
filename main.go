@@ -77,7 +77,7 @@ func main() {
     fmt.Println("delete elastic search index successfully")
   } else if *pullPtr {
     collector := collector.NewCollector(client, es, time.Second * 10, time.Second * 5)
-    go collector.Start()
+    go collector.StartPull()
     <- collector.Done
   } else {
     cList, err := client.GetAllList(1, 1)
