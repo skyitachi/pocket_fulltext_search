@@ -13,7 +13,7 @@ type Agent struct {
   Exit chan int // 外部强制退出channel
   Done chan int
   Interval time.Duration // 拉取pocket数据interval
-  SyncInterval time.Duration
+  SyncInterval time.Duration // 同步pocket数据的interval
 }
 
 func (agent *Agent) StartPull() {
